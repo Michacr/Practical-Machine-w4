@@ -1,0 +1,121 @@
+---
+title: "Machine learning project"
+date: "11/7/2020"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify **how well they do it**.
+
+## Loading the data
+
+```{r packages}
+library(rattle)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(corrplot)
+library(randomForest)
+library(RColorBrewer)
+
+```
+
+## Load the data
+
+```{r data, echo=TRUE}
+trainRaw <- read.csv("/Users/michaelcruz/Documents/Documentos/Diplomados/Data Science/Module 8/pml-training.csv")
+testRaw <- read.csv("/Users/michaelcruz/Documents/Documentos/Diplomados/Data Science/Module 8/pml-testing.csv")
+dim(trainRaw)
+```
+
+```{r, echo=TRUE}
+dim(testRaw)
+```
+
+Then, clean the data from the elements you are not gonna use.
+```{r, echo=TRUE}
+NZV <- nearZeroVar(trainRaw, saveMetrics = TRUE)
+head(NZV, 20)
+```
+```{r, echo=TRUE}
+training01 <- trainRaw[, !NZV$nzv]
+testing01 <- testRaw[, !NZV$nzv]
+dim(training01)
+```
+
+```{r, echo=TRUE}
+dim(testing01)
+```
+
+```{r, echo=TRUE}
+rm(trainRaw)
+rm(testRaw)
+rm(NZV)
+```
+
+To remove the variables that does not contribute in accelerometer measurements: 
+
+```{r, echo=TRUE}
+regex <- grepl("^X|timestamp|user_name", names(training01))
+training <- training01[, !regex]
+testing <- testing01[, !regex]
+rm(regex)
+rm(training01)
+rm(testing01)
+dim(training)
+```
+
+To remove NAN
+
+```{r, echo=TRUE}
+cond <- (colSums(is.na(training)) == 0)
+training <- training[, cond]
+testing <- testing[, cond]
+rm(cond)
+```
+
+To visualize the correlation between different variables in the dataset.
+
+```{r, echo=TRUE}
+corrplot(cor(training[, -length(names(training))]), method = "color", tl.cex = 0.5)
+```
+
+## Approach
+
+I am going to apply two different models and evaluate how they behave on this data. Two models will be run and they are decision tree and random forest. we seek the model with the highest accuracy will be our final model. we will use the ordinary way to split the cleaned training set into a pure training data set (70%) and a validation data set (30%). We will use the validation data set to conduct cross validation. We are using seed for reproducability purposes.
+
+```{r, echo=TRUE}
+set.seed(56789) # For reproducibile purpose
+inTrain <- createDataPartition(training$classe, p = 0.70, list = FALSE)
+validation <- training[-inTrain, ]
+training <- training[inTrain, ]
+rm(inTrain)
+```
+
+## Decision Tree
+
+```{r, echo=TRUE}
+modelTree <- rpart(classe ~ ., data = training, method = "class")
+rpart.plot(modelTree, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+```
+
+```{r, echo=TRUE}
+predictTree <- predict(modelTree, validation, type = "class")
+```
+
+We now train our model using random forest and doing the dame validation
+
+
+## Conlusion
+we find that the Accuracy of the Random Forest Model and error is better than the Decision Tree model. so we conclude that the random forest is the better model.
+
+## submission part
+this is the code for predicting outcome levels on the original Testing data set using Random Forest algorithm as it is the chosn model as being better at performance on our data.
